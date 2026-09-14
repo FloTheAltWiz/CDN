@@ -51,6 +51,7 @@
   #poseRow { grid-column: span 3; justify-content: center; background: #2f2a1f; }
   #backdropRow { grid-column: span 3; justify-content: center; background: #1f2a2f; }
   #actionRow { grid-column: span 3; justify-content: center; }
+  #importRow{     grid-column: span 3;justify-content:center;}
   label { font-size: 12px; }
 </style>
 </head>
@@ -67,7 +68,24 @@
 
 <script>
 /* ======================================================================================================================================= */
+function encodeData(obj) {
+  const jsonString = JSON.stringify(obj);
+  // Convert string to bytes to handle special characters / emojis safely
+  const bytes = new TextEncoder().encode(jsonString);
+  const binaryString = String.fromCharCode(...bytes);
+  return btoa(binaryString);
+}
 
+
+function decodeData(encodedStr) {
+  const binaryString = atob(encodedStr);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const jsonString = new TextDecoder().decode(bytes);
+  return JSON.parse(jsonString);
+}
 const OFFSET = [8, 16];
 const HAIROFFSET = [0, 7];
 
@@ -281,6 +299,7 @@ const charRender = {
     idx = (idx + dir + ids.length) % ids.length;
     this.options[category] = ids[idx];
     this.dirty = true;
+    clearImpExp();
     draw();
   },
   randomize() {
@@ -290,6 +309,7 @@ const charRender = {
     }
     hairPicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
     this.dirty = true;
+    clearImpExp();
     draw();
   },
   setPose(p) {
@@ -329,12 +349,47 @@ function undo() {
   charRender.dirty = true;
   updateUndoButton();
   draw();
+  clearImpExp();
 }
 
 function updateUndoButton() {
   const btn = document.getElementById("undoBtn");
   if (btn) btn.disabled = history.length === 0;
 }
+
+
+function clearImpExp(){
+  const inp = document.getElementById("importExportArea");
+  inp.value = '';
+}
+function importChar(){
+  console.log("I am running")
+  const inp = document.getElementById("importExportArea");
+  const inpstr = inp.value;
+  if (!inpstr) {
+    console.log("Import clicked and yet... No input!")
+  }
+
+  
+  const options = decodeData(inpstr);
+  if (options) {
+    snapshotHistory();
+    charRender.options = options;
+    charRender.dirty = true;
+    draw();
+  }
+  else (
+    console.log("No Options")
+  )
+ 
+}
+
+function exportChar(){
+  const exportstr = encodeData(charRender.options);
+  const inp = document.getElementById("importExportArea");
+  inp.value = exportstr;
+}
+
 function drawPart(store, id, targetCtx) {
   const def = data[store][id];
   if (!def) return;
@@ -472,6 +527,14 @@ function buildControls() {
   `;
   controls.appendChild(actionRow);
 
+  const importRow = document.createElement("div");
+  importRow.className = "row";
+  importRow.id = "importRow";
+  importRow.innerHTML = `
+  <button id="importBtn" style="width:25%;padding:4px 10px;">Import</button><textarea id="importExportArea"></textarea><button id="exportBtn" style="width:25%;padding:4px 10px;">Export</button>
+  `;
+  controls.appendChild(importRow);
+
   controls.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-cat]");
     if (btn) charRender.cycle(btn.dataset.cat, Number(btn.dataset.dir));
@@ -482,6 +545,9 @@ function buildControls() {
   document.getElementById("backdropUp").addEventListener("click", () => charRender.cycleBackdrop(1));
   document.getElementById("randomBtn").addEventListener("click", () => charRender.randomize());
   document.getElementById("undoBtn").addEventListener("click", undo);
+  document.getElementById("importBtn").addEventListener("click", importChar);
+  document.getElementById("exportBtn").addEventListener("click", exportChar);
+  
 }
 
 let sheetsPending = 2;
