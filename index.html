@@ -22,50 +22,146 @@
     image-rendering: pixelated;
     border: 2px solid #444;
   }
+  #wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+    
+  @media (max-width: 700px) {
+    #wrapper {
+      flex-direction: column;
+    }
+  }
+  #ui {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
   #controls {
     display: grid;
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+    width: 340px;
+    max-width: 94vw;
   }
   .row {
     display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     background: #26262f;
-    padding: 6px 10px;
-    border-radius: 4px;
+    padding: 8px 6px;
+    border-radius: 8px;
+    width: 100%;
+  }
+  .row .label {
+    font-size: 12px;
+    text-align: center;
+  }
+  .btnGroup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
   }
   .row button {
     cursor: pointer;
     background: #3a3a48;
     color: #eee;
     border: 1px solid #555;
-    border-radius: 3px;
-    width: 24px;
+    border-radius: 6px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
   }
   .row button:disabled {
     opacity: 0.35;
     cursor: default;
   }
-  .row span { min-width: 60px; font-size: 12px; }
-  #poseRow { grid-column: span 3; justify-content: center; background: #2f2a1f; }
-  #backdropRow { grid-column: span 3; justify-content: center; background: #1f2a2f; }
-  #actionRow { grid-column: span 3; justify-content: center; }
-  #importRow{     grid-column: span 3;justify-content:center;}
+  .row button.lockBtn {
+    background: #3a3a48;
+  }
+  .row button.lockBtn.locked {
+    background: #6b5a1f;
+    border-color: #c9a83a;
+  }
+  .row input[type="color"] {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: none;
+  }
+  #poseRow { background: #2f2a1f; }
+  #backdropRow { background: #1f2a2f; }
+  #actionRow {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  #actionRow button {
+    min-width: auto;
+    width: auto;
+    height: auto;
+    padding: 8px 14px;
+  }
+  #importRow {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #importExportArea {
+    width: 100%;
+    min-height: 50px;
+    font-family: monospace;
+    font-size: 11px;
+    background: #1b1b22;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 6px;
+    resize: vertical;
+  }
+  #importRow .btnGroup { width: 100%; flex-wrap: nowrap; }
+  #importRow .btnGroup button { flex: 1; min-width: auto; height: auto; padding: 8px; }
+  #colorSection {
+    display: flex;
+    justify-content: center;
+    width: 340px;
+    max-width: 94vw;
+  }
   label { font-size: 12px; }
 </style>
 </head>
 <body>
-
+<h2>FISHFISHFISH Character maker</h2>
+<p>(Right click canvas to save low-res, or use "Save PNG" for a hi-res export)</p>
+<div id="wrapper">
 <canvas width="32" height="48" id="canv"></canvas>
-
-<div class="row">
-  <label>Hair colour</label>
-  <input id="hair" type="color">
+<div id="ui">
+<div id="colorSection">
+  <div class="row" id="hairRow">
+    <span class="label">Hair colour</span>
+    <div class="btnGroup">
+      <input id="hair" type="color">
+      <button id="hairLockBtn" class="lockBtn" data-lock="haircolor" title="Lock hair colour">🔓</button>
+    </div>
+  </div>
+  
 </div>
 
 <div id="controls"></div>
-
+</div>
+</div>
 <script>
 /* ======================================================================================================================================= */
 function encodeData(obj) {
@@ -238,6 +334,11 @@ addCharShirtBig("shirts_green_dress",{ x: 32, y: 352, w: 32, h: 16, sleeve: 0, o
 addCharShirtBig("shirts_blue_dress",{ x: 64, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
 addCharShirtBig("shirts_pink_dress",{ x: 96, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
 addCharShirtBig("shirts_cthulhu_dress",{ x: 128, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharShirtBig("shirts_long_purple",{ x: 0, y: 368, w: 32, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"],colorOverrides: { shirt: "#793a80" }, palette: ARM_PALETTE});
+addCharShirtBig("shirts_purple_dungarees",{ x: 32, y: 368, w: 32, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"],colorOverrides: { shirt: "#285cc4" }, palette: ARM_PALETTE});
+
+addCharShirtBig("shirts_blue_dungarees",{ x: 64, y: 368, w: 32, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+
 // add pants
 
 
@@ -274,6 +375,11 @@ const CATEGORY_STORE = {
   hair: "hairs", shirt: "shirts", pants: "pants"
 };
 
+// Everything that randomize() can touch, keyed the same way it decides
+// whether to skip it. Kept separate from CATEGORY_STORE so pose/backdrop/
+// haircolor (which aren't sprite categories) can still be locked & rolled.
+const LOCKABLE = [...Object.keys(CATEGORY_STORE), "pose", "backdrop", "haircolor"];
+
 const charCache = document.createElement("canvas");
 charCache.width = 32;
 charCache.height = 48;
@@ -291,6 +397,12 @@ const charRender = {
   backdrop: "backdrop_0",
   dirty: true, // forces the first cache build
   colors: {},
+  // Per-option locks, checked by randomize(). Not part of undo history
+  locked: Object.fromEntries(LOCKABLE.map(k => [k, false])),
+  toggleLock(key) {
+    this.locked[key] = !this.locked[key];
+    refreshLockButtons();
+  },
   cycle(category, dir) {
     snapshotHistory();
     const store = CATEGORY_STORE[category];
@@ -302,12 +414,41 @@ const charRender = {
     clearImpExp();
     draw();
   },
+  // Re-roll a single option, ignoring its lock (an explicit per-row dice)
+  randomizeOne(key) {
+    snapshotHistory();
+    if (key === "pose") {
+      this.pose = Math.floor(Math.random() * ARM_POSES);
+      this.dirty = true;
+    } else if (key === "backdrop") {
+      const ids = Object.keys(data.backdrops);
+      if (ids.length) this.backdrop = choose(ids);
+    } else if (key === "haircolor") {
+      hairPicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+      this.dirty = true;
+    } else {
+      this.options[key] = choose(Object.keys(data[CATEGORY_STORE[key]]));
+      this.dirty = true;
+    }
+    clearImpExp();
+    draw();
+  },
   randomize() {
     snapshotHistory();
     for (const category of Object.keys(CATEGORY_STORE)) {
+      if (this.locked[category]) continue;
       this.options[category] = choose(Object.keys(data[CATEGORY_STORE[category]]));
     }
-    hairPicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+    if (!this.locked.haircolor) {
+      hairPicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+    }
+    if (!this.locked.pose) {
+      this.pose = Math.floor(Math.random() * ARM_POSES);
+    }
+    if (!this.locked.backdrop) {
+      const ids = Object.keys(data.backdrops);
+      if (ids.length) this.backdrop = choose(ids);
+    }
     this.dirty = true;
     clearImpExp();
     draw();
@@ -335,6 +476,8 @@ const history = [];
 function snapshotHistory() {
   history.push({
     options: { ...charRender.options },
+    pose: charRender.pose,
+    backdrop: charRender.backdrop,
     hair: hairPicker.value
   });
   if (history.length > HISTORY_LIMIT) history.shift();
@@ -345,6 +488,8 @@ function undo() {
   if (!history.length) return;
   const prev = history.pop();
   charRender.options = prev.options;
+  charRender.pose = prev.pose;
+  charRender.backdrop = prev.backdrop;
   hairPicker.value = prev.hair;
   charRender.dirty = true;
   updateUndoButton();
@@ -371,12 +516,23 @@ function importChar(){
   }
 
   
-  const options = decodeData(inpstr);
-  if (options) {
+  const importData = decodeData(inpstr);
+  console.log(importData);
+  if (importData.options) {
     snapshotHistory();
-    charRender.options = options;
+    charRender.options = importData.options;
+    charRender.colors = importData.colors;
     charRender.dirty = true;
     draw();
+    return;
+  }
+  if (importData.hair) {
+    // it's an old style singular one 
+    snapshotHistory();
+    charRender.options = importData;
+    charRender.dirty = true;
+    draw();
+    return;
   }
   else (
     console.log("No Options")
@@ -385,9 +541,37 @@ function importChar(){
 }
 
 function exportChar(){
-  const exportstr = encodeData(charRender.options);
+  const exportData = {
+    options:charRender.options,
+    colors:charRender.colors,
+  }
+  const exportstr = encodeData(exportData);
   const inp = document.getElementById("importExportArea");
   inp.value = exportstr;
+}
+
+// Hi-res PNG export. The on-screen canvas is already the exact composited
+// frame at native 32x48 res, so we just blit it upscaled with smoothing off
+// (nearest-neighbour) onto a bigger offscreen canvas and download that.
+function exportPNG(scale = 10) {
+  const out = document.createElement("canvas");
+  out.width = canv.width * scale;
+  out.height = canv.height * scale;
+  const octx = out.getContext("2d");
+  octx.imageSmoothingEnabled = false;
+  octx.drawImage(canv, 0, 0, canv.width, canv.height, 0, 0, out.width, out.height);
+
+  out.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    a.href = url;
+    a.download = `fishfishfish_character_${stamp}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, "image/png");
 }
 
 function drawPart(store, id, targetCtx) {
@@ -405,7 +589,18 @@ function drawPart(store, id, targetCtx) {
 
   if (def.exportsColors) {
     const top = getTopColors(imageData, def.exportsColors.length);
-    def.exportsColors.forEach((slot, i) => { if (top[i]) charRender.colors[slot] = top[i]; });
+    def.exportsColors.forEach((slot, i) => {
+      const manual = def.colorOverrides && def.colorOverrides[slot];
+      if (manual) {
+        // Hand-set on this specific part's definition — bypasses
+        // getTopColors entirely for sprites where auto-detection grabs
+        // the wrong dominant pixel (e.g. outline/shadow beats the actual
+        // shirt colour). Accepts either a hex string or an [r,g,b] array.
+        charRender.colors[slot] = typeof manual === "string" ? hexToRgb(manual) : manual;
+      } else if (top[i]) {
+        charRender.colors[slot] = top[i];
+      }
+    });
   }
 
   const replacements = {};
@@ -483,38 +678,63 @@ function draw() {
 
 // ---- UI ---------------------------------------------------------------
 
+function refreshLockButtons() {
+  document.querySelectorAll("button.lockBtn").forEach((btn) => {
+    const key = btn.dataset.lock;
+    const isLocked = !!charRender.locked[key];
+    btn.classList.toggle("locked", isLocked);
+    btn.textContent = isLocked ? "🔒" : "🔓";
+  });
+}
+
+function lockButtonHTML(key) {
+  return `<button class="lockBtn" data-lock="${key}" title="Lock ${key}">🔓</button>`;
+}
+
 function buildControls() {
   const controls = document.getElementById("controls");
   for (const category of Object.keys(CATEGORY_STORE)) {
     const row = document.createElement("div");
     row.className = "row";
     row.innerHTML = `
-      <button data-cat="${category}" data-dir="-1">-</button>
-      <span>${category}</span>
-      <button data-cat="${category}" data-dir="1">+</button>
+      <span class="label">${category}</span>
+      <div class="btnGroup">
+        <button data-cat="${category}" data-dir="-1">−</button>
+        <button data-cat="${category}" data-dir="1">+</button>
+        <button class="diceBtn" data-roll="${category}" title="Randomize ${category}">🎲</button>
+        ${lockButtonHTML(category)}
+      </div>
     `;
     controls.appendChild(row);
   }
 
-  // Pose row
+  // Pose and backdrop share the same compact card shape as the categories
+  // above — just with their own handlers instead of a data-cat lookup.
   const poseRow = document.createElement("div");
   poseRow.className = "row";
   poseRow.id = "poseRow";
   poseRow.innerHTML = `
-    <button id="poseDown">-</button>
-    <span>pose++</span>
-    <button id="poseUp">+</button>
+    <span class="label">pose</span>
+    <div class="btnGroup">
+      <button id="poseDown">−</button>
+      <button id="poseUp">+</button>
+      <button class="diceBtn" data-roll="pose" title="Randomize pose">🎲</button>
+      ${lockButtonHTML("pose")}
+    </div>
   `;
   controls.appendChild(poseRow);
 
-  // Backdrop row
   const backdropRow = document.createElement("div");
   backdropRow.className = "row";
   backdropRow.id = "backdropRow";
   backdropRow.innerHTML = `
-    <button id="backdropDown">-</button>
-    <span>backdrop++</span>
-    <button id="backdropUp">+</button>
+    <span class="label">backdrop</span>
+    <div class="btnGroup">
+      <button id="backdropDown">−</button>
+      <button id="backdropUp">+</button>
+      <button class="diceBtn" data-roll="backdrop" title="Randomize backdrop">🎲</button>
+      ${lockButtonHTML("backdrop")}
+    </div>
   `;
   controls.appendChild(backdropRow);
 
@@ -522,8 +742,9 @@ function buildControls() {
   actionRow.className = "row";
   actionRow.id = "actionRow";
   actionRow.innerHTML = `
-    <button id="undoBtn" style="width:auto;padding:4px 10px;" disabled>Undo</button>
-    <button id="randomBtn" style="width:auto;padding:4px 10px;">Randomize</button>
+    <button id="undoBtn" disabled>Undo</button>
+    <button id="randomBtn">Randomize All</button>
+    <button id="savePngBtn">Save PNG</button>
   `;
   controls.appendChild(actionRow);
 
@@ -531,13 +752,24 @@ function buildControls() {
   importRow.className = "row";
   importRow.id = "importRow";
   importRow.innerHTML = `
-  <button id="importBtn" style="width:25%;padding:4px 10px;">Import</button><textarea id="importExportArea"></textarea><button id="exportBtn" style="width:25%;padding:4px 10px;">Export</button>
+    <span class="label">Import / Export</span>
+    <textarea id="importExportArea"></textarea>
+    <div class="btnGroup">
+      <button id="importBtn">Import</button>
+      <button id="exportBtn">Export</button>
+    </div>
   `;
   controls.appendChild(importRow);
 
   controls.addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-cat]");
-    if (btn) charRender.cycle(btn.dataset.cat, Number(btn.dataset.dir));
+    const cycleBtn = e.target.closest("button[data-cat]");
+    if (cycleBtn) { charRender.cycle(cycleBtn.dataset.cat, Number(cycleBtn.dataset.dir)); return; }
+
+    const rollBtn = e.target.closest("button[data-roll]");
+    if (rollBtn) { charRender.randomizeOne(rollBtn.dataset.roll); return; }
+
+    const lockBtn = e.target.closest("button.lockBtn");
+    if (lockBtn) { charRender.toggleLock(lockBtn.dataset.lock); return; }
   });
   document.getElementById("poseDown").addEventListener("click", () => charRender.setPose(charRender.pose - 1));
   document.getElementById("poseUp").addEventListener("click", () => charRender.setPose(charRender.pose + 1));
@@ -547,7 +779,10 @@ function buildControls() {
   document.getElementById("undoBtn").addEventListener("click", undo);
   document.getElementById("importBtn").addEventListener("click", importChar);
   document.getElementById("exportBtn").addEventListener("click", exportChar);
-  
+  document.getElementById("savePngBtn").addEventListener("click", () => exportPNG());
+  document.getElementById("hairLockBtn").addEventListener("click", () => charRender.toggleLock("haircolor"));
+
+  refreshLockButtons();
 }
 
 let sheetsPending = 2;
