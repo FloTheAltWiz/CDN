@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 24px;
+    font-family: monospace;
+    background: #1b1b22;
+    color: #eee;
+  }
+  canvas {
+    background-color: black;
+    width: 320px;
+    height: 480px;
+    image-rendering: pixelated;
+    border: 2px solid #444;
+  }
+  #controls {
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #26262f;
+    padding: 6px 10px;
+    border-radius: 4px;
+  }
+  .row button {
+    cursor: pointer;
+    background: #3a3a48;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 3px;
+    width: 24px;
+  }
+  .row button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .row span { min-width: 60px; font-size: 12px; }
+  #poseRow { grid-column: span 3; justify-content: center; background: #2f2a1f; }
+  #backdropRow { grid-column: span 3; justify-content: center; background: #1f2a2f; }
+  #actionRow { grid-column: span 3; justify-content: center; }
+  label { font-size: 12px; }
+</style>
+</head>
+<body>
+
+<canvas width="32" height="48" id="canv"></canvas>
+
+<div class="row">
+  <label>Hair colour</label>
+  <input id="hair" type="color">
+</div>
+
+<div id="controls"></div>
+
+<script>
+/* ======================================================================================================================================= */
+
+const OFFSET = [8, 16];
+const HAIROFFSET = [0, 7];
+
+const GREY_RAMP = {
+  "51,57,65": 0.4,
+  "74,84,98": 0.6,
+  "109,117,141": 0.8,
+  "139,147,175": 1.0
+};
+
+const ARM_PALETTE = {
+  "206,206,206": { slot: "skin",       factor: 1 },
+  "86,86,86":    { slot: "skinShadow", factor: 1 },
+  "74,84,98":    { slot: "shirt",      factor: 1 },
+  "139,147,175": { slot: "shirt",      factor: 1.25 }
+};
+
+// ---- utilities ----------------------------------------------------------
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function shade([r, g, b], factor) {
+  return [Math.round(r * factor), Math.round(g * factor), Math.round(b * factor)];
+}
+
+function replaceColors(imageData, replacements) {
+  const pixels = imageData.data;
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i + 3] === 0) continue;
+    const key = `${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}`;
+    const color = replacements[key];
+    if (color) {
+      pixels[i] = color[0];
+      pixels[i + 1] = color[1];
+      pixels[i + 2] = color[2];
+    }
+  }
+}
+
+function getTopColors(imageData, n) {
+  const pixels = imageData.data;
+  const counts = {};
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i + 3] === 0) continue;
+    const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+    if (r < 10 && g < 10 && b < 15) continue; // skip the standard outline colour
+    const key = `${r},${g},${b}`;
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([k]) => k.split(",").map(Number));
+}
+
+function choose(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+// ---- registry ------------------------------------------------------------
+
+const data = {
+  spritesheets: {},
+  bases: {}, eyes: {}, mouths: {}, hairs: {}, shirts: {}, pants: {}, arms: {},
+  backdrops: {}
+};
+
+function addPart(store, id, def, defaultDraw) {
+  data[store][id] = Object.assign({ drawX: defaultDraw[0], drawY: defaultDraw[1], sheet: "flo_chars" }, def);
+}
+function addCharBase(id, def)  { addPart("bases",  id, def, OFFSET); }
+function addCharEyes(id, def)  { addPart("eyes",   id, def, [OFFSET[0], OFFSET[1]-2]); }
+function addCharMouth(id, def) { addPart("mouths", id, def, [OFFSET[0], OFFSET[1] + 8]); }
+function addCharHair(id, def)  { addPart("hairs",  id, def, HAIROFFSET); }
+
+function addCharShirt(id, def) { addPart("shirts", id, def, [OFFSET[0], OFFSET[1] + 16]); }
+function addCharShirtBig(id, def) {addPart("shirts", id, def, [OFFSET[0]-8, OFFSET[1]+15]);}
+
+function addCharPants(id, def) { addPart("pants",  id, def, [OFFSET[0], OFFSET[1] + 16]); }
+function addCharArms(id, def)  { addPart("arms",   id, def, [OFFSET[0] - 8, OFFSET[1] - 1]); }
+// backdrops be different
+function addBackdrop(id, def) {
+  data.backdrops[id] = Object.assign({ sheet: "backdrops", x: 0, y: 0, w: 32, h: 48 }, def);
+}
+
+// Verified rows -------------------------------------------------------
+
+for (let i = 0; i < 20; i++) {
+  addCharBase(`skin_${i}`, { x: i * 16, y: 0, w: 16, h: 32, exportsColors: ["skin", "skinShadow"] });
+}
+// 3 rows of eyes
+for (let i = 0; i < 20; i++) {
+  addCharEyes(`eyes_${i}`, { x: i * 16, y: 32, w: 16, h: 16 });
+}
+for (let i = 0; i < 20; i++) {
+  addCharEyes(`eyes_${20+i}`, { x: i * 16, y: 48, w: 16, h: 16 });
+}
+for (let i = 0; i < 2; i++) {
+	addCharEyes(`eyes_${40+i}`, { x: i * 16, y: 64, w: 16, h: 16 });
+}
+for (let i = 0; i < 9; i++) {
+  addCharMouth(`mouth_${i}`, { x: i * 16, y: 96, w: 16, h: 16, hairColored: i >= 6 });
+}
+for (let i = 0; i < 2; i++) {
+  addCharMouth(`mouth_${9+i}`, { x: i * 16, y: 112, w: 16, h: 16});
+}
+for (let i = 0; i < 10; i++) {
+  addCharHair(`hair_${i}`, { x: i * 32, y: 128, w: 32, h: 32, hairColored: true });
+}
+for (let i = 0; i < 4; i++) {
+  addCharHair(`hair_${10+i}`,{ x: i * 32, y: 160, w: 32, h: 32, hairColored: true } )
+}
+// Second row is shorts 
+
+// Arms: 3 sleeve styles x 3 poses. Registered as independent entries keyed
+// by BOTH axes so pose can vary without touching sleeve/shirt logic at all.
+const ARM_POSES = 3;
+for (let s = 0; s < 3; s++) {
+  for (let p = 0; p < ARM_POSES; p++) {
+    addCharArms(`arms_sleeve${s}_pose${p}`, { x: s * 96 + p * 32, y: 256, w: 32, h: 32, palette: ARM_PALETTE });
+  }
+}
+
+addCharShirt("shirts_blue_jumper", { x: 0,  y: 288, w: 16, h: 16, sleeve: 2, overPants: false, exportsColors: ["shirt"] });
+addCharShirt("shirts_blue_cardigan", { x: 16,  y: 288, w: 16, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_blue_seagull", { x: 32,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_red_seagull", { x: 48,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_white_shirt", { x: 64,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_red_shirt", { x: 80,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_blue_shirt", { x: 96,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+
+
+
+addCharShirt("shirts_pink_fish", { x: 0,  y: 304, w: 16, h: 16, sleeve: 1, overPants: true,  exportsColors: ["shirt"] });
+addCharShirt("shirts_green_heart", { x: 16, y: 304, w: 16, h: 16, sleeve: 1, overPants: false, exportsColors: ["shirt"] });
+addCharShirt("shirts_pink_spaghetti", { x: 32, y: 304, w: 16, h: 16, sleeve: 0, overPants: false, exportsColors: ["shirt"] });
+addCharShirt("shirts_white_tank",{ x: 48, y: 304, w: 16, h: 16, sleeve: 0, overPants: false, exportsColors: ["shirt"] });
+addCharShirt("shirts_green_mesh",{ x: 64, y: 304, w: 16, h: 16, sleeve: 0, overPants: false, exportsColors: ["shirt"] });
+
+addCharShirt("shirts_red_plaid", { x: 80, y: 304, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_purple_plaid",{ x: 96, y: 304, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_green_plaid",{ x: 112, y: 304, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_green_cthulhu",{ x: 128, y: 304, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+
+addCharShirtBig("shirts_purple_dress",{ x: 0, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharShirtBig("shirts_green_dress",{ x: 32, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharShirtBig("shirts_blue_dress",{ x: 64, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharShirtBig("shirts_pink_dress",{ x: 96, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharShirtBig("shirts_cthulhu_dress",{ x: 128, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+// add pants
+
+
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_blue_${i}`, { x: 0, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
+}
+
+
+for (let i = 0; i < 3; i++) {
+	addCharPants(`pants_green_${i}`, { x: 16, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
+}
+
+for (let i = 0; i < 3; i++) {
+	addCharPants(`pants_pink_${i}`, { x: 32, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
+}
+
+for (let i = 0; i < 3; i++) {
+	addCharPants(`pants_brown_${i}`, { x: 48, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
+}
+
+const BACKDROP_COUNT = 6;
+for (let i = 0; i < BACKDROP_COUNT; i++) {
+  addBackdrop(`backdrop_${i}`, { x: i * 32, y: 0 });
+}
+
+const canv = document.getElementById("canv");
+const ctx = canv.getContext("2d");
+const hairPicker = document.getElementById("hair");
+hairPicker.value = "#8b5a2b";
+hairPicker.addEventListener("input", () => { snapshotHistory(); charRender.dirty = true; draw(); });
+
+const CATEGORY_STORE = {
+  base: "bases", eyes: "eyes", mouth: "mouths",
+  hair: "hairs", shirt: "shirts", pants: "pants"
+};
+
+const charCache = document.createElement("canvas");
+charCache.width = 32;
+charCache.height = 48;
+const charCacheCtx = charCache.getContext("2d");
+
+const charRender = {
+  options: {
+    base: "skin_12", eyes: "eyes_13", mouth: "mouth_6",
+    hair: "hair_5", shirt: "shirts_blue_jumper", pants: "pants_1"
+  },
+  // Pose and backdrop live outside `options` on purpose: they're set by
+  // whatever's driving the scene (walk cycle, a menu preview...) often and
+  // independently of what the character looks like
+  pose: 0,
+  backdrop: "backdrop_0",
+  dirty: true, // forces the first cache build
+  colors: {},
+  cycle(category, dir) {
+    snapshotHistory();
+    const store = CATEGORY_STORE[category];
+    const ids = Object.keys(data[store]);
+    let idx = ids.indexOf(this.options[category]);
+    idx = (idx + dir + ids.length) % ids.length;
+    this.options[category] = ids[idx];
+    this.dirty = true;
+    draw();
+  },
+  randomize() {
+    snapshotHistory();
+    for (const category of Object.keys(CATEGORY_STORE)) {
+      this.options[category] = choose(Object.keys(data[CATEGORY_STORE[category]]));
+    }
+    hairPicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+    this.dirty = true;
+    draw();
+  },
+  setPose(p) {
+    const total = ARM_POSES;
+    this.pose = ((p % total) + total) % total;
+    this.dirty = true; // pose changes which arm sprite is drawn, so the cache DOES need a rebuild 
+    draw();
+  },
+  cycleBackdrop(dir) {
+    const ids = Object.keys(data.backdrops);
+    if (!ids.length) return;
+    let idx = ids.indexOf(this.backdrop);
+    idx = (idx + dir + ids.length) % ids.length;
+    this.backdrop = ids[idx];
+    draw(); // no dirty flag set 
+  }
+};
+
+// ---- undo history ---------------------------------------------------------
+const HISTORY_LIMIT = 30;
+const history = [];
+
+function snapshotHistory() {
+  history.push({
+    options: { ...charRender.options },
+    hair: hairPicker.value
+  });
+  if (history.length > HISTORY_LIMIT) history.shift();
+  updateUndoButton();
+}
+
+function undo() {
+  if (!history.length) return;
+  const prev = history.pop();
+  charRender.options = prev.options;
+  hairPicker.value = prev.hair;
+  charRender.dirty = true;
+  updateUndoButton();
+  draw();
+}
+
+function updateUndoButton() {
+  const btn = document.getElementById("undoBtn");
+  if (btn) btn.disabled = history.length === 0;
+}
+function drawPart(store, id, targetCtx) {
+  const def = data[store][id];
+  if (!def) return;
+  const sheet = data.spritesheets[def.sheet];
+  if (!sheet) return;
+
+  const off = document.createElement("canvas");
+  off.width = def.w;
+  off.height = def.h;
+  const octx = off.getContext("2d");
+  octx.drawImage(sheet, def.x, def.y, def.w, def.h, 0, 0, def.w, def.h);
+  const imageData = octx.getImageData(0, 0, def.w, def.h);
+
+  if (def.exportsColors) {
+    const top = getTopColors(imageData, def.exportsColors.length);
+    def.exportsColors.forEach((slot, i) => { if (top[i]) charRender.colors[slot] = top[i]; });
+  }
+
+  const replacements = {};
+  if (def.hairColored) {
+    for (const [rgb, factor] of Object.entries(GREY_RAMP)) {
+      replacements[rgb] = shade(charRender.colors.hair, factor);
+    }
+  }
+  if (def.palette) {
+    for (const [rgb, { slot, factor = 1 }] of Object.entries(def.palette)) {
+      if (charRender.colors[slot]) replacements[rgb] = shade(charRender.colors[slot], factor);
+    }
+  }
+  if (Object.keys(replacements).length) {
+    replaceColors(imageData, replacements);
+    octx.putImageData(imageData, 0, 0);
+  }
+
+  targetCtx.drawImage(off, def.drawX, def.drawY);
+}
+
+// Rebuilds the character cache from scratch. This is the "expensive" path
+// (one offscreen canvas + getImageData per part), only called when dirty is true
+function renderCharacterToCache() {
+  charCacheCtx.clearRect(0, 0, charCache.width, charCache.height);
+  charRender.colors = { hair: hexToRgb(hairPicker.value) };
+
+  drawPart("bases", charRender.options.base, charCacheCtx);
+
+  const shirtDef = data.shirts[charRender.options.shirt];
+  if (shirtDef && shirtDef.overPants) {
+    drawPart("pants", charRender.options.pants, charCacheCtx);
+    drawPart("shirts", charRender.options.shirt, charCacheCtx);
+  } else {
+    drawPart("shirts", charRender.options.shirt, charCacheCtx);
+    drawPart("pants", charRender.options.pants, charCacheCtx);
+  }
+
+  const sleeve = shirtDef ? (shirtDef.sleeve ?? 0) : 0;
+  
+  drawPart("eyes", charRender.options.eyes, charCacheCtx);
+  drawPart("mouths", charRender.options.mouth, charCacheCtx);
+  drawPart("hairs", charRender.options.hair, charCacheCtx);
+  drawPart("arms", `arms_sleeve${sleeve}_pose${charRender.pose}`, charCacheCtx);
+}
+
+// Cheap path: blit the backdrop straight from its sheet (no offscreen
+// canvas, no colour work cos there's nothing to recolor), then stamp the
+// already-rendered character cache on top.
+function composite() {
+  ctx.clearRect(0, 0, canv.width, canv.height);
+
+  const backdropDef = data.backdrops[charRender.backdrop];
+  const backdropSheet = backdropDef && data.spritesheets[backdropDef.sheet];
+  if (backdropDef && backdropSheet) {
+    ctx.drawImage(
+      backdropSheet, backdropDef.x, backdropDef.y, backdropDef.w, backdropDef.h,
+      0, 0, backdropDef.w, backdropDef.h
+    );
+  } else {
+    ctx.fillStyle = "#0000ff";
+    ctx.fillRect(0, 0, canv.width, canv.height);
+  }
+
+  ctx.drawImage(charCache, 0, 0);
+}
+
+function draw() {
+  if (charRender.dirty) {
+    renderCharacterToCache();
+    charRender.dirty = false;
+  }
+  composite();
+}
+
+// ---- UI ---------------------------------------------------------------
+
+function buildControls() {
+  const controls = document.getElementById("controls");
+  for (const category of Object.keys(CATEGORY_STORE)) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <button data-cat="${category}" data-dir="-1">-</button>
+      <span>${category}</span>
+      <button data-cat="${category}" data-dir="1">+</button>
+    `;
+    controls.appendChild(row);
+  }
+
+  // Pose row
+  const poseRow = document.createElement("div");
+  poseRow.className = "row";
+  poseRow.id = "poseRow";
+  poseRow.innerHTML = `
+    <button id="poseDown">-</button>
+    <span>pose++</span>
+    <button id="poseUp">+</button>
+  `;
+  controls.appendChild(poseRow);
+
+  // Backdrop row
+  const backdropRow = document.createElement("div");
+  backdropRow.className = "row";
+  backdropRow.id = "backdropRow";
+  backdropRow.innerHTML = `
+    <button id="backdropDown">-</button>
+    <span>backdrop++</span>
+    <button id="backdropUp">+</button>
+  `;
+  controls.appendChild(backdropRow);
+
+  const actionRow = document.createElement("div");
+  actionRow.className = "row";
+  actionRow.id = "actionRow";
+  actionRow.innerHTML = `
+    <button id="undoBtn" style="width:auto;padding:4px 10px;" disabled>Undo</button>
+    <button id="randomBtn" style="width:auto;padding:4px 10px;">Randomize</button>
+  `;
+  controls.appendChild(actionRow);
+
+  controls.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-cat]");
+    if (btn) charRender.cycle(btn.dataset.cat, Number(btn.dataset.dir));
+  });
+  document.getElementById("poseDown").addEventListener("click", () => charRender.setPose(charRender.pose - 1));
+  document.getElementById("poseUp").addEventListener("click", () => charRender.setPose(charRender.pose + 1));
+  document.getElementById("backdropDown").addEventListener("click", () => charRender.cycleBackdrop(-1));
+  document.getElementById("backdropUp").addEventListener("click", () => charRender.cycleBackdrop(1));
+  document.getElementById("randomBtn").addEventListener("click", () => charRender.randomize());
+  document.getElementById("undoBtn").addEventListener("click", undo);
+}
+
+let sheetsPending = 2;
+function loadSheet(name, url) {
+  const img = new Image();
+  img.crossOrigin = "Anonymous";
+  img.onload = () => {
+    data.spritesheets[name] = img;
+    sheetsPending--;
+    if (sheetsPending === 0) draw();
+  };
+  img.src = url;
+}
+
+function load() {
+  loadSheet("flo_chars", "charspritesheet.png");
+  loadSheet("backdrops", "charbgs.png"); 
+}
+
+buildControls();
+load();
+setTimeout(() => {charRender.randomize();},550)
+
+</script>
+</body>
+</html>
