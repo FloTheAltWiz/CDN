@@ -520,10 +520,15 @@ function importChar(){
   console.log(importData);
   if (importData.options) {
     snapshotHistory();
-    charRender.options = importData.options;
-    charRender.colors = importData.colors;
+    charRender.options = importData.options ?? charRender.options;
+    charRender.colors = importData.colors ?? charRender.colors;
+    charRender.pose = importData.pose ?? charRender.pose;
+    charRender.backdrop = importData.backdrop ?? charRender.backdrop;
+    console.log(charRender.colors)
+     hairPicker.value = charRender.colors.hair
     charRender.dirty = true;
     draw();
+   
     return;
   }
   if (importData.hair) {
@@ -544,7 +549,11 @@ function exportChar(){
   const exportData = {
     options:charRender.options,
     colors:charRender.colors,
+    pose: charRender.pose,
+    backdrop: charRender.backdrop
   }
+  exportData.colors.hair = hairPicker.value;
+  console.log(exportData);
   const exportstr = encodeData(exportData);
   const inp = document.getElementById("importExportArea");
   inp.value = exportstr;
