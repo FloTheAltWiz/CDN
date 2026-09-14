@@ -269,8 +269,9 @@ function addCharArms(id, def)  { addPart("arms",   id, def, [OFFSET[0] - 8, OFFS
 function addBackdrop(id, def) {
   data.backdrops[id] = Object.assign({ sheet: "backdrops", x: 0, y: 0, w: 32, h: 48 }, def);
 }
-
-// Verified rows -------------------------------------------------------
+//////// TODO: 
+// Add "Coats / Covers" over ALL
+// Add Shoes on top of legs
 
 for (let i = 0; i < 20; i++) {
   addCharBase(`skin_${i}`, { x: i * 16, y: 0, w: 16, h: 32, exportsColors: ["skin", "skinShadow"] });
@@ -361,7 +362,7 @@ for (let i = 0; i < 3; i++) {
 	addCharPants(`pants_brown_${i}`, { x: 48, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
 }
 
-const BACKDROP_COUNT = 6;
+const BACKDROP_COUNT = 10;
 for (let i = 0; i < BACKDROP_COUNT; i++) {
   addBackdrop(`backdrop_${i}`, { x: i * 32, y: 0 });
 }
