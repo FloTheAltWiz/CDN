@@ -459,13 +459,27 @@ function previewColor() {
 		draw();
 	});
 }
+let colorPreviewPending = false;
+
+function previewColor() {
+	if (colorPreviewPending) return;
+
+	colorPreviewPending = true;
+	requestAnimationFrame(() => {
+		colorPreviewPending = false;
+		charRender.dirty = true;
+		draw();
+	});
+}
 // i should've stolen l() too </j>
 const canv = document.getElementById("canv");
 const ctx = canv.getContext("2d");
 const hairPicker = document.getElementById("hair");
 hairPicker.value = "#8b5a2b";
 hairPicker.addEventListener("input",previewColor);
+hairPicker.addEventListener("input",previewColor);
 
+hairPicker.addEventListener("change",previewColor);
 hairPicker.addEventListener("change",previewColor);
 
 const eyePicker = document.getElementById("eyeCol");
