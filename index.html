@@ -355,6 +355,9 @@ addCharShirt("shirts_white_shirt", { x: 64,  y: 288, w: 16, h: 16, sleeve: 1, ov
 addCharShirt("shirts_red_shirt", { x: 80,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 addCharShirt("shirts_blue_shirt", { x: 96,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 addCharShirt("shirts_bee_shirt", { x: 112,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_stripy_shirt", { x: 128,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_nice_shirt", { x: 144,  y: 288, w: 16, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"] });
+addCharShirt("shirts_sailor_shirt", { x: 160,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 
 
 addCharShirt("shirts_pink_fish", { x: 0,  y: 304, w: 16, h: 16, sleeve: 1, overPants: true,  exportsColors: ["shirt"] });
@@ -444,20 +447,26 @@ const BACKDROP_COUNT = 10;
 for (let i = 0; i < BACKDROP_COUNT; i++) {
   addBackdrop(`backdrop_${i}`, { x: i * 32, y: 0 });
 }
+let colorPreviewPending = false;
 
+function previewColor() {
+	if (colorPreviewPending) return;
+
+	colorPreviewPending = true;
+	requestAnimationFrame(() => {
+		colorPreviewPending = false;
+		charRender.dirty = true;
+		draw();
+	});
+}
 // i should've stolen l() too </j>
 const canv = document.getElementById("canv");
 const ctx = canv.getContext("2d");
 const hairPicker = document.getElementById("hair");
 hairPicker.value = "#8b5a2b";
-hairPicker.addEventListener("input", () => {
-	charRender.dirty = true;
-	draw();
-});
+hairPicker.addEventListener("input",previewColor);
 
-hairPicker.addEventListener("change", () => {
-	snapshotHistory();
-});
+hairPicker.addEventListener("change",previewColor);
 
 const eyePicker = document.getElementById("eyeCol");
 eyePicker.value = "#8669c3";
