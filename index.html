@@ -150,10 +150,18 @@
 <div id="ui">
 <div id="colorSection">
   <div class="row" id="hairRow">
+
+    <span class="label">Eye Color (where applicable)</span>
+    <div class="btnGroup">
+      <input id="eyeCol" type="color">
+      <button id="eyeColorLockBtn" class="lockBtn" data-lock="eyecolor" title="Lock Eye colour">🔓</button>
+      <button class="diceBtn" data-roll="eyecolor" title="Randomize Eye Color" id="eyeColorDiceBtn">🎲</button>
+    </div>
     <span class="label">Hair colour</span>
     <div class="btnGroup">
       <input id="hair" type="color">
       <button id="hairLockBtn" class="lockBtn" data-lock="haircolor" title="Lock hair colour">🔓</button>
+       <button class="diceBtn" data-roll="haircolor" title="Randomize Hair" id="hairColorDiceBtn">🎲</button>
     </div>
   </div>
   
@@ -186,10 +194,10 @@ const OFFSET = [8, 16];
 const HAIROFFSET = [0, 7];
 
 const GREY_RAMP = {
-  "51,57,65": 0.4,
-  "74,84,98": 0.6,
-  "109,117,141": 0.8,
-  "139,147,175": 1.0
+  "51,57,65": 0.7,
+  "74,84,98": 0.85,
+  "109,117,141": 1.0,
+  "139,147,175": 1.15
 };
 
 const ARM_PALETTE = {
@@ -237,7 +245,7 @@ function getTopColors(imageData, n) {
   for (let i = 0; i < pixels.length; i += 4) {
     if (pixels[i + 3] === 0) continue;
     const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
-    if (r < 10 && g < 10 && b < 15) continue; // skip the standard outline colour
+    if (r < 40 && g < 40 && b < 40) continue;
     const key = `${r},${g},${b}`;
     counts[key] = (counts[key] || 0) + 1;
   }
@@ -293,11 +301,11 @@ function addBackdrop(id, def) {
 }
 
 for (let i = 0; i < 20; i++) {
-  addCharBase(`skin_${i}`, { x: i * 16, y: 0, w: 16, h: 32, exportsColors: ["skin", "skinShadow"] });
+  addCharBase(`skin_${i}`, {name: `Skin Tone ${i}`, x: i * 16, y: 0, w: 16, h: 32, exportsColors: ["skin", "skinShadow"] });
 }
 // 3 rows of eyes
 for (let i = 0; i < 20; i++) {
-  addCharEyes(`eyes_${i}`, { x: i * 16, y: 32, w: 16, h: 16 });
+  addCharEyes(`eyes_${i}`, {name: `Eyes ${i}`, x: i * 16, y: 32, w: 16, h: 16 });
 }
 for (let i = 0; i < 20; i++) {
   addCharEyes(`eyes_${20+i}`, { x: i * 16, y: 48, w: 16, h: 16 });
@@ -305,6 +313,17 @@ for (let i = 0; i < 20; i++) {
 for (let i = 0; i < 2; i++) {
 	addCharEyes(`eyes_${40+i}`, { x: i * 16, y: 64, w: 16, h: 16 });
 }
+addCharEyes(`eyes_colored_normal`, {x: 0, y: 80, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_lined`, {x: 16, y: 80, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_basic`, {x: 32, y: 80, w:16, h:16, eyeColored: true});
+
+addCharEyes(`eyes_colored_slightlymore`, {x:48, y: 80, w:16, h:16, eyeColored: true});
+
+addCharEyes(`eyes_colored_glasses`, {x: 64, y: 80, w:16, h:16, eyeColored: true});
+
+addCharEyes(`eyes_colored_small`, {x: 80, y: 80, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_sad`, {x: 96, y: 80, w:16, h:16, eyeColored: true});
+
 for (let i = 0; i < 9; i++) {
   addCharMouth(`mouth_${i}`, { x: i * 16, y: 96, w: 16, h: 16, hairColored: i >= 6 });
 }
@@ -335,7 +354,7 @@ addCharShirt("shirts_red_seagull", { x: 48,  y: 288, w: 16, h: 16, sleeve: 1, ov
 addCharShirt("shirts_white_shirt", { x: 64,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 addCharShirt("shirts_red_shirt", { x: 80,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 addCharShirt("shirts_blue_shirt", { x: 96,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
-
+addCharShirt("shirts_bee_shirt", { x: 112,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 
 
 addCharShirt("shirts_pink_fish", { x: 0,  y: 304, w: 16, h: 16, sleeve: 1, overPants: true,  exportsColors: ["shirt"] });
@@ -351,25 +370,54 @@ addCharShirt("shirts_green_cthulhu",{ x: 128, y: 304, w: 16, h: 16, sleeve: 1, o
 
 
 
+//for (const name in ["shorts","short-shorts","booty-shorts","pants"])
 for (let i = 0; i < 4; i++) {
-	addCharPants(`pants_blue_${i}`, { x: 0, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
+	addCharPants(`pants_l_blue_${i}`, { x: 0, y: 384+(i*16), w: 16, h: 16,});
 }
 
-
-for (let i = 0; i < 3; i++) {
-	addCharPants(`pants_green_${i}`, { x: 16, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_green_${i}`, { x: 16, y: 384+(i*16), w: 16, h: 16,});
 }
 
-for (let i = 0; i < 3; i++) {
-	addCharPants(`pants_pink_${i}`, { x: 32, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_pink_${i}`, { x: 32, y: 384+(i*16), w: 16, h: 16,});
 }
 
-for (let i = 0; i < 3; i++) {
-	addCharPants(`pants_brown_${i}`, { x: 48, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_brown_${i}`, { x: 48, y: 384+(i*16), w: 16, h: 16,});
 }
+
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_camo_${i}`, { x: 64, y: 384+(i*16), w: 16, h: 16,});
+}
+
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_red_${i}`, { x: 80, y: 384+(i*16), w: 16, h: 16});
+}
+
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_blue_${i}`, { x: 96, y: 384+(i*16), w: 16, h: 16});
+}
+
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_black_${i}`, { x: 112, y: 384+(i*16), w: 16, h: 16});
+}
+
+for (let i = 0; i < 4; i++) {
+	addCharPants(`pants_yellow_${i}`, { x: 128, y: 384+(i*16), w: 16, h: 16});
+}
+
+// Turn into bee addCharPants(`pants_red_long`, { x: 144, y: 384, w: 16, h: 16, palette: ARM_PALETTE });
+// Ideas:
+// Fishnets (colored),
+// Leggings / Tights
+// Cargo Trousers
+// more "Fishing gear"
+
+
 const SHOE_COUNT = 7;
 for (let i = 0; i < SHOE_COUNT; i++) {
-  addCharShoes(`shoes_${i}`, { x: i * 16, y: 448, w: 16, h: 8 });
+  addCharShoes(`shoes_${i}`, { x: i * 16, y: 448, w: 16, h: 8, palette: ARM_PALETTE});
 }
 addCharShoes("shoes_none", { none: true });
 
@@ -386,8 +434,11 @@ addCharCoat("coats_cthulhu_dress",{ x: 128, y: 352, w: 32, h: 16, sleeve: 0, ove
 addCharCoat("coats_long_purple", { x: 0, y: 368, w: 32, h: 16, sleeve: 1, exportsColors: ["shirt"], colorOverrides: { shirt: "#793a80" }, palette: ARM_PALETTE });
 addCharCoat("coats_purple_dungarees", { x: 32, y: 368, w: 32, h: 16, sleeve: 0, exportsColors: ["shirt"], colorOverrides: { shirt: "#285cc4" }, palette: ARM_PALETTE });
 addCharCoat("coats_blue_dungarees", { x: 64, y: 368, w: 32, h: 16, sleeve: 0, exportsColors: ["shirt"], palette: ARM_PALETTE });
-addCharCoat("coats_cloud_dungarees", { x: 96, y: 368, w: 32, h: 16, sleeve: 2, exportsColors: ["shirt"], palette: ARM_PALETTE });
-addCharCoat("coats_black_dungarees", { x: 128, y: 368, w: 32, h: 16, sleeve: 2, exportsColors: ["shirt", "shirtSecondary"], palette: ARM_PALETTE });
+addCharCoat("coats_cloud_dungarees", { x: 96, y: 368, w: 32, h: 16, sleeve: 0, exportsColors: ["shirt"], palette: ARM_PALETTE });
+addCharCoat("coats_black_dungarees", { x: 128, y: 368, w: 32, h: 16, sleeve: 2, exportsColors: ["shirt", "shirtSecondary"], palette: {
+	"51,57,65": { slot: "shirt", factor: 1 },
+	"74,84,98": { slot: "shirtSecondary", factor: 1 }
+} });
 addCharCoat("coats_none", { none: true });
 
 const BACKDROP_COUNT = 10;
@@ -399,7 +450,27 @@ const canv = document.getElementById("canv");
 const ctx = canv.getContext("2d");
 const hairPicker = document.getElementById("hair");
 hairPicker.value = "#8b5a2b";
-hairPicker.addEventListener("input", () => { snapshotHistory(); charRender.dirty = true; draw(); });
+hairPicker.addEventListener("input", () => {
+	charRender.dirty = true;
+	draw();
+});
+
+hairPicker.addEventListener("change", () => {
+	snapshotHistory();
+});
+
+const eyePicker = document.getElementById("eyeCol");
+eyePicker.value = "#8b5a2b";
+eyePicker.addEventListener("input", () => {
+	charRender.dirty = true;
+	draw();
+});
+
+eyePicker.addEventListener("change", () => {
+	snapshotHistory();
+});
+
+
 
 const CATEGORY_STORE = {
   base: "bases", eyes: "eyes", mouth: "mouths",
@@ -410,7 +481,7 @@ const CATEGORY_STORE = {
 // Everything that randomize() can touch, keyed the same way it decides
 // whether to skip it. Kept separate from CATEGORY_STORE so pose/backdrop/
 // haircolor (which aren't sprite categories) can still be locked & rolled.
-const LOCKABLE = [...Object.keys(CATEGORY_STORE), "pose", "backdrop", "haircolor"];
+const LOCKABLE = [...Object.keys(CATEGORY_STORE), "pose", "backdrop", "haircolor", "eyecolor"];
 
 const charCache = document.createElement("canvas");
 charCache.width = 32;
@@ -459,7 +530,11 @@ const charRender = {
     } else if (key === "haircolor") {
       hairPicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
       this.dirty = true;
-    } else {
+    } else if (key === "eyecolor") {
+      eyePicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+      this.dirty = true;
+    }
+    else {
       this.options[key] = choose(Object.keys(data[CATEGORY_STORE[key]]));
       this.dirty = true;
     }
@@ -467,10 +542,22 @@ const charRender = {
     draw();
   },
   randomize() {
+    // it'd be cool to make this have a 50% chance of no coat
     snapshotHistory();
     for (const category of Object.keys(CATEGORY_STORE)) {
       if (this.locked[category]) continue;
-      this.options[category] = choose(Object.keys(data[CATEGORY_STORE[category]]));
+      //console.log(category)
+      if (category === "coat") {
+        if (Math.random() > 0.5) {
+          this.options[category] = choose(Object.keys(data[CATEGORY_STORE[category]]));
+        }
+        else {
+          this.options[category] = "no_coat";
+        }
+      }
+      else {
+        this.options[category] = choose(Object.keys(data[CATEGORY_STORE[category]]));
+      }
     }
     if (!this.locked.haircolor) {
       hairPicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
@@ -541,7 +628,7 @@ function clearImpExp(){
   inp.value = '';
 }
 function importChar(){
-  console.log("I am running")
+  //console.log("I am running")
   const inp = document.getElementById("importExportArea");
   const inpstr = inp.value;
   if (!inpstr) {
@@ -550,14 +637,14 @@ function importChar(){
 
   
   const importData = decodeData(inpstr);
-  console.log(importData);
+  //console.log(importData);
   if (importData.options) {
     snapshotHistory();
     charRender.options = importData.options ?? charRender.options;
     charRender.colors = importData.colors ?? charRender.colors;
     charRender.pose = importData.pose ?? charRender.pose;
     charRender.backdrop = importData.backdrop ?? charRender.backdrop;
-    console.log(charRender.colors)
+    //console.log(charRender.colors)
      hairPicker.value = charRender.colors.hair
     charRender.dirty = true;
     draw();
@@ -586,7 +673,7 @@ function exportChar(){
     backdrop: charRender.backdrop
   }
   exportData.colors.hair = hairPicker.value;
-  console.log(exportData);
+  //console.log(exportData);
   const exportstr = encodeData(exportData);
   const inp = document.getElementById("importExportArea");
   inp.value = exportstr;
@@ -632,6 +719,7 @@ function drawPart(store, id, targetCtx) {
 
   if (def.exportsColors) {
     const top = getTopColors(imageData, def.exportsColors.length);
+    //console.log(def, top);
     def.exportsColors.forEach((slot, i) => {
       const manual = def.colorOverrides && def.colorOverrides[slot];
       if (manual) {
@@ -655,6 +743,11 @@ function drawPart(store, id, targetCtx) {
       replacements[rgb] = shade(charRender.colors.hair, factor);
     }
   }
+  if (def.eyeColored) {
+    for (const [rgb, factor] of Object.entries(GREY_RAMP)) {
+      replacements[rgb] = shade(charRender.colors.eye, factor);
+    }
+  }
   if (def.palette) {
     for (const [rgb, { slot, factor = 1 }] of Object.entries(def.palette)) {
       if (charRender.colors[slot]) replacements[rgb] = shade(charRender.colors[slot], factor);
@@ -672,7 +765,7 @@ function drawPart(store, id, targetCtx) {
 // (one offscreen canvas + getImageData per part), only called when dirty is true
 function renderCharacterToCache() {
   charCacheCtx.clearRect(0, 0, charCache.width, charCache.height);
-  charRender.colors = { hair: hexToRgb(hairPicker.value) };
+  charRender.colors = { hair: hexToRgb(hairPicker.value), eye: hexToRgb(eyePicker.value)};
 
   drawPart("bases", charRender.options.base, charCacheCtx);
 
@@ -840,7 +933,11 @@ function buildControls() {
   document.getElementById("exportBtn").addEventListener("click", exportChar);
   document.getElementById("savePngBtn").addEventListener("click", () => exportPNG());
   document.getElementById("hairLockBtn").addEventListener("click", () => charRender.toggleLock("haircolor"));
-
+  document.getElementById("eyeColorLockBtn").addEventListener("click", () => charRender.toggleLock("eyecolor"));
+  
+  document.getElementById("eyeColorDiceBtn").addEventListener("click", () => charRender.randomizeOne("eyecolor"));
+  document.getElementById("hairColorDiceBtn").addEventListener("click", () => charRender.randomizeOne("haircolor"));
+  
   refreshLockButtons();
 }
 
