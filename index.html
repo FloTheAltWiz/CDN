@@ -71,7 +71,7 @@
     gap: 5px;
     flex-wrap: wrap;
   }
-  .row button {
+  button {
     cursor: pointer;
     background: #3a3a48;
     color: #eee;
@@ -79,7 +79,7 @@
     border-radius: 6px;
     min-width: 32px;
     min-height: 32px;
-    padding: 0;
+    padding: 2px;
     font-size: 14px;
     line-height: 1;
   }
@@ -148,6 +148,7 @@
 <div id="wrapper">
 <canvas width="32" height="48" id="canv"></canvas>
 <div id="ui">
+  <button onclick="() => {charRender.dirty=true;draw();}"> Refresh </button>
 <div id="colorSection">
   <div class="row" id="hairRow">
 
@@ -310,19 +311,22 @@ for (let i = 0; i < 20; i++) {
 for (let i = 0; i < 20; i++) {
   addCharEyes(`eyes_${20+i}`, { x: i * 16, y: 48, w: 16, h: 16 });
 }
-for (let i = 0; i < 2; i++) {
-	addCharEyes(`eyes_${40+i}`, { x: i * 16, y: 64, w: 16, h: 16 });
-}
-addCharEyes(`eyes_colored_normal`, {x: 0, y: 80, w:16, h:16, eyeColored: true});
-addCharEyes(`eyes_colored_lined`, {x: 16, y: 80, w:16, h:16, eyeColored: true});
-addCharEyes(`eyes_colored_basic`, {x: 32, y: 80, w:16, h:16, eyeColored: true});
 
-addCharEyes(`eyes_colored_slightlymore`, {x:48, y: 80, w:16, h:16, eyeColored: true});
+// change to 64
 
-addCharEyes(`eyes_colored_glasses`, {x: 64, y: 80, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_normal`, {x: 0, y: 64, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_lined`, {x: 16, y: 64, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_basic`, {x: 32, y: 64, w:16, h:16, eyeColored: true});
 
-addCharEyes(`eyes_colored_small`, {x: 80, y: 80, w:16, h:16, eyeColored: true});
-addCharEyes(`eyes_colored_sad`, {x: 96, y: 80, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_slightlymore`, {x:48, y: 64, w:16, h:16, eyeColored: true});
+
+addCharEyes(`eyes_colored_glasses`, {x: 64, y:64, w:16, h:16, eyeColored: true});
+
+addCharEyes(`eyes_colored_small`, {x: 80, y: 64, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_sad`, {x: 96, y: 64, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_eyeline`, {x: 112, y: 64, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_cyclops`, {x: 128, y: 64, w:16, h:16, eyeColored: true});
+addCharEyes(`eyes_colored_big_glasses`, {x: 144, y:64, w:16, h:16, eyeColored: true});
 
 for (let i = 0; i < 9; i++) {
   addCharMouth(`mouth_${i}`, { x: i * 16, y: 96, w: 16, h: 16, hairColored: i >= 6 });
@@ -406,7 +410,7 @@ for (let i = 0; i < 4; i++) {
 for (let i = 0; i < 4; i++) {
 	addCharPants(`pants_yellow_${i}`, { x: 128, y: 384+(i*16), w: 16, h: 16});
 }
-
+addCharPants(`pants_yellow_bee`, { x: 144, y: 384, w: 16, h: 16});
 // Turn into bee addCharPants(`pants_red_long`, { x: 144, y: 384, w: 16, h: 16, palette: ARM_PALETTE });
 // Ideas:
 // Fishnets (colored),
@@ -460,7 +464,7 @@ hairPicker.addEventListener("change", () => {
 });
 
 const eyePicker = document.getElementById("eyeCol");
-eyePicker.value = "#8b5a2b";
+eyePicker.value = "#8669c3";
 eyePicker.addEventListener("input", () => {
 	charRender.dirty = true;
 	draw();
