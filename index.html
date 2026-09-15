@@ -766,13 +766,13 @@ function drawPart(store, id, targetCtx) {
 
 // Rebuilds the character cache from scratch. This is the "expensive" path
 // (one offscreen canvas + getImageData per part), only called when dirty is true
-function renderCharacterToCache() {
+function renderCharacterToCache() { //// In an ideal world this would be some sort of "drawOntopOf":"id", "drawsBehind":"id" that autosorts
   charCacheCtx.clearRect(0, 0, charCache.width, charCache.height);
   charRender.colors = { hair: hexToRgb(hairPicker.value), eye: hexToRgb(eyePicker.value)};
 
   drawPart("bases", charRender.options.base, charCacheCtx);
-
   const shirtDef = data.shirts[charRender.options.shirt];
+
   if (shirtDef && shirtDef.overPants) {
     drawPart("pants", charRender.options.legs, charCacheCtx);
     drawPart("shirts", charRender.options.shirt, charCacheCtx);
@@ -781,12 +781,13 @@ function renderCharacterToCache() {
     drawPart("pants", charRender.options.legs, charCacheCtx);
   }
 
-  drawPart("shoes", charRender.options.shoes, charCacheCtx); // on top of legs
-  // nab these in case coat tries to overtake them.
+  // nab these for in case coat wants them because shoes mutate them
   const shirtColors = { ...charRender.colors };
 
+  drawPart("shoes", charRender.options.shoes, charCacheCtx); 
+ 
   const coatDef = data.coats[charRender.options.coat];
-  drawPart("coats", charRender.options.coat, charCacheCtx); // above shirt, legs, and shoes
+  drawPart("coats", charRender.options.coat, charCacheCtx);
 
   // Coat should possibly overtake the top underneath, but also be not.
   let sleeve = shirtDef?.sleeve ?? 0;
