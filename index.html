@@ -171,6 +171,8 @@
 <div id="controls"></div>
 </div>
 </div>
+this is a WIP / prototype / test, any bugs or suggestions please DM me directly :)
+<p>(Or if you wanna do some art I can give you the base sprite)</p>
 <script>
 /* ======================================================================================================================================= */
 function encodeData(obj) {
@@ -218,10 +220,6 @@ function hexToRgb(hex) {
 function shade([r, g, b], factor) {
   return [Math.round(r * factor), Math.round(g * factor), Math.round(b * factor)];
 }
-
-// Used to reject a "secondary" colour that's really just anti-aliasing
-// noise off the primary one (e.g. a near-solid white shirt), so we fall
-// back to reusing the primary colour instead of a barely-different shade.
 function colorsAreClose([r1, g1, b1], [r2, g2, b2], threshold = 20) {
   return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2) < threshold;
 }
@@ -240,13 +238,14 @@ function replaceColors(imageData, replacements) {
   }
 }
 
-function getTopColors(imageData, n) {
+function getTopColors(imageData, n) { 
+  // gets most common colors
   const pixels = imageData.data;
   const counts = {};
   for (let i = 0; i < pixels.length; i += 4) {
     if (pixels[i + 3] === 0) continue;
     const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
-    if (r < 40 && g < 40 && b < 40) continue;
+    if (r < 40 && g < 40 && b < 40) continue; // if it's basically black, avoids REALLY dark from grey clothes
     const key = `${r},${g},${b}`;
     counts[key] = (counts[key] || 0) + 1;
   }
@@ -256,8 +255,8 @@ function getTopColors(imageData, n) {
     .map(([k]) => k.split(",").map(Number));
 }
 
-function choose(array) {
-  return array[Math.floor(Math.random() * array.length)];
+function choose(array) {// cheers ort
+  return array[Math.floor(Math.random() * array.length)]; 
 }
 
 // ---- registry ------------------------------------------------------------
@@ -276,11 +275,6 @@ function addCharBase(id, def)  { addPart("bases",  id, def, OFFSET); }
 function addCharEyes(id, def)  { addPart("eyes",   id, def, [OFFSET[0], OFFSET[1]-2]); }
 function addCharMouth(id, def) { addPart("mouths", id, def, [OFFSET[0], OFFSET[1] + 8]); }
 function addCharHair(id, def)  { addPart("hairs",  id, def, HAIROFFSET); }
-
-// Any part exporting "shirt" also exports "shirtSecondary" alongside it,
-// so sleeves/dresses get two real extracted tones instead of one colour
-// plus a mathematically-lightened guess. Existing definitions don't need
-// to list it themselves.
 function withShirtSecondary(def) {
   if (!def.exportsColors || !def.exportsColors.includes("shirt") || def.exportsColors.includes("shirtSecondary")) {
     return def;
@@ -304,15 +298,18 @@ function addBackdrop(id, def) {
 for (let i = 0; i < 20; i++) {
   addCharBase(`skin_${i}`, {name: `Skin Tone ${i}`, x: i * 16, y: 0, w: 16, h: 32, exportsColors: ["skin", "skinShadow"] });
 }
-// 3 rows of eyes
+
+
+// need to "name" the items for display
+
+
+// 2 rows of eyes
 for (let i = 0; i < 20; i++) {
   addCharEyes(`eyes_${i}`, {name: `Eyes ${i}`, x: i * 16, y: 32, w: 16, h: 16 });
 }
 for (let i = 0; i < 20; i++) {
   addCharEyes(`eyes_${20+i}`, { x: i * 16, y: 48, w: 16, h: 16 });
 }
-
-// change to 64
 
 addCharEyes(`eyes_colored_normal`, {x: 0, y: 64, w:16, h:16, eyeColored: true});
 addCharEyes(`eyes_colored_lined`, {x: 16, y: 64, w:16, h:16, eyeColored: true});
@@ -342,8 +339,7 @@ for (let i = 0; i < 9; i++) {
 }
 // Second row is shorts 
 
-// Arms: 3 sleeve styles x 3 poses. Registered as independent entries keyed
-// by BOTH axes so pose can vary without touching sleeve/shirt logic at all.
+// Arms: 3 sleeve styles x 3 poses
 const ARM_POSES = 3;
 for (let s = 0; s < 3; s++) {
   for (let p = 0; p < ARM_POSES; p++) {
@@ -374,7 +370,7 @@ addCharShirt("shirts_green_cthulhu",{ x: 128, y: 304, w: 16, h: 16, sleeve: 1, o
 
 
 
-//for (const name in ["shorts","short-shorts","booty-shorts","pants"])
+//for (const name in ["shorts","short-shorts","booty-shorts","pants"]) or smth
 for (let i = 0; i < 4; i++) {
 	addCharPants(`pants_l_blue_${i}`, { x: 0, y: 384+(i*16), w: 16, h: 16,});
 }
@@ -434,7 +430,6 @@ addCharCoat("coats_blue_dress",{ x: 64, y: 352, w: 32, h: 16, sleeve: 0, overPan
 addCharCoat("coats_pink_dress",{ x: 96, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
 addCharCoat("coats_cthulhu_dress",{ x: 128, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
 
-// add pants
 addCharCoat("coats_long_purple", { x: 0, y: 368, w: 32, h: 16, sleeve: 1, exportsColors: ["shirt"], colorOverrides: { shirt: "#793a80" }, palette: ARM_PALETTE });
 addCharCoat("coats_purple_dungarees", { x: 32, y: 368, w: 32, h: 16, sleeve: 0, exportsColors: ["shirt"], colorOverrides: { shirt: "#285cc4" }, palette: ARM_PALETTE });
 addCharCoat("coats_blue_dungarees", { x: 64, y: 368, w: 32, h: 16, sleeve: 0, exportsColors: ["shirt"], palette: ARM_PALETTE });
@@ -450,6 +445,7 @@ for (let i = 0; i < BACKDROP_COUNT; i++) {
   addBackdrop(`backdrop_${i}`, { x: i * 32, y: 0 });
 }
 
+// i should've stolen l() too </j>
 const canv = document.getElementById("canv");
 const ctx = canv.getContext("2d");
 const hairPicker = document.getElementById("hair");
@@ -565,6 +561,9 @@ const charRender = {
     }
     if (!this.locked.haircolor) {
       hairPicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+    }
+    if (!this.locked.eyecolor) {
+      eyePicker.value = "#" + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
     }
     if (!this.locked.pose) {
       this.pose = Math.floor(Math.random() * ARM_POSES);
@@ -684,8 +683,8 @@ function exportChar(){
 }
 
 // Hi-res PNG export. The on-screen canvas is already the exact composited
-// frame at native 32x48 res, so we just blit it upscaled with smoothing off
-// (nearest-neighbour) onto a bigger offscreen canvas and download that.
+// frame at native 32x48 res, so we just blit it upscaled with 
+// nearest-neighbour onto a bigger offscreen canvas and download that.
 // TODO: Notify users when downloading lmfao
 function exportPNG(scale = 10) {
   const out = document.createElement("canvas");
