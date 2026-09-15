@@ -196,7 +196,7 @@ const ARM_PALETTE = {
   "206,206,206": { slot: "skin",       factor: 1 },
   "86,86,86":    { slot: "skinShadow", factor: 1 },
   "74,84,98":    { slot: "shirt",      factor: 1 },
-  "139,147,175": { slot: "shirt",      factor: 1.25 }
+  "139,147,175": { slot: "shirtSecondary", factor: 1 }
 };
 
 // ---- utilities ----------------------------------------------------------
@@ -208,6 +208,13 @@ function hexToRgb(hex) {
 
 function shade([r, g, b], factor) {
   return [Math.round(r * factor), Math.round(g * factor), Math.round(b * factor)];
+}
+
+// Used to reject a "secondary" colour that's really just anti-aliasing
+// noise off the primary one (e.g. a near-solid white shirt), so we fall
+// back to reusing the primary colour instead of a barely-different shade.
+function colorsAreClose([r1, g1, b1], [r2, g2, b2], threshold = 20) {
+  return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2) < threshold;
 }
 
 function replaceColors(imageData, replacements) {
@@ -249,6 +256,7 @@ function choose(array) {
 const data = {
   spritesheets: {},
   bases: {}, eyes: {}, mouths: {}, hairs: {}, shirts: {}, pants: {}, arms: {},
+  shoes: {}, coats: {},
   backdrops: {}
 };
 
@@ -260,18 +268,29 @@ function addCharEyes(id, def)  { addPart("eyes",   id, def, [OFFSET[0], OFFSET[1
 function addCharMouth(id, def) { addPart("mouths", id, def, [OFFSET[0], OFFSET[1] + 8]); }
 function addCharHair(id, def)  { addPart("hairs",  id, def, HAIROFFSET); }
 
-function addCharShirt(id, def) { addPart("shirts", id, def, [OFFSET[0], OFFSET[1] + 16]); }
-function addCharShirtBig(id, def) {addPart("shirts", id, def, [OFFSET[0]-8, OFFSET[1]+15]);}
+// Any part exporting "shirt" also exports "shirtSecondary" alongside it,
+// so sleeves/dresses get two real extracted tones instead of one colour
+// plus a mathematically-lightened guess. Existing definitions don't need
+// to list it themselves.
+function withShirtSecondary(def) {
+  if (!def.exportsColors || !def.exportsColors.includes("shirt") || def.exportsColors.includes("shirtSecondary")) {
+    return def;
+  }
+  return { ...def, exportsColors: [...def.exportsColors, "shirtSecondary"] };
+}
+
+function addCharShirt(id, def) { addPart("shirts", id, withShirtSecondary(def), [OFFSET[0], OFFSET[1] + 16]); }
+function addCharShirtBig(id, def) {addPart("shirts", id, withShirtSecondary(def), [OFFSET[0]-8, OFFSET[1]+15]);}
 
 function addCharPants(id, def) { addPart("pants",  id, def, [OFFSET[0], OFFSET[1] + 16]); }
 function addCharArms(id, def)  { addPart("arms",   id, def, [OFFSET[0] - 8, OFFSET[1] - 1]); }
+function addCharShoes(id, def) { addPart("shoes", id, def, [OFFSET[0], OFFSET[1] + 24]); }
+function addCharCoat(id, def)  { addPart("coats", id, withShirtSecondary(def), [OFFSET[0] - 8, OFFSET[1]+15]); }
+
 // backdrops be different
 function addBackdrop(id, def) {
   data.backdrops[id] = Object.assign({ sheet: "backdrops", x: 0, y: 0, w: 32, h: 48 }, def);
 }
-//////// TODO: 
-// Add "Coats / Covers" over ALL
-// Add Shoes on top of legs
 
 for (let i = 0; i < 20; i++) {
   addCharBase(`skin_${i}`, { x: i * 16, y: 0, w: 16, h: 32, exportsColors: ["skin", "skinShadow"] });
@@ -295,7 +314,7 @@ for (let i = 0; i < 2; i++) {
 for (let i = 0; i < 10; i++) {
   addCharHair(`hair_${i}`, { x: i * 32, y: 128, w: 32, h: 32, hairColored: true });
 }
-for (let i = 0; i < 4; i++) {
+for (let i = 0; i < 9; i++) {
   addCharHair(`hair_${10+i}`,{ x: i * 32, y: 160, w: 32, h: 32, hairColored: true } )
 }
 // Second row is shorts 
@@ -309,7 +328,7 @@ for (let s = 0; s < 3; s++) {
   }
 }
 
-addCharShirt("shirts_blue_jumper", { x: 0,  y: 288, w: 16, h: 16, sleeve: 2, overPants: false, exportsColors: ["shirt"] });
+addCharShirt("shirts_blue_jumper", { x: 0,  y: 288, w: 16, h: 16, sleeve: 2, overPants: false, exportsColors: ["shirt", "shirtSecondary"] });
 addCharShirt("shirts_blue_cardigan", { x: 16,  y: 288, w: 16, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"] });
 addCharShirt("shirts_blue_seagull", { x: 32,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 addCharShirt("shirts_red_seagull", { x: 48,  y: 288, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
@@ -330,19 +349,6 @@ addCharShirt("shirts_purple_plaid",{ x: 96, y: 304, w: 16, h: 16, sleeve: 1, ove
 addCharShirt("shirts_green_plaid",{ x: 112, y: 304, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 addCharShirt("shirts_green_cthulhu",{ x: 128, y: 304, w: 16, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"] });
 
-addCharShirtBig("shirts_purple_dress",{ x: 0, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
-addCharShirtBig("shirts_green_dress",{ x: 32, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
-addCharShirtBig("shirts_blue_dress",{ x: 64, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
-addCharShirtBig("shirts_pink_dress",{ x: 96, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
-addCharShirtBig("shirts_cthulhu_dress",{ x: 128, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
-addCharShirtBig("shirts_long_purple",{ x: 0, y: 368, w: 32, h: 16, sleeve: 1, overPants: true, exportsColors: ["shirt"],colorOverrides: { shirt: "#793a80" }, palette: ARM_PALETTE});
-addCharShirtBig("shirts_purple_dungarees",{ x: 32, y: 368, w: 32, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"],colorOverrides: { shirt: "#285cc4" }, palette: ARM_PALETTE});
-
-addCharShirtBig("shirts_blue_dungarees",{ x: 64, y: 368, w: 32, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
-addCharShirtBig("shirts_cloud_dungarees",{ x: 96, y: 368, w: 32, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
-addCharShirtBig("shirts_black_dungarees",{ x: 128, y: 368, w: 32, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
-
-// add pants
 
 
 for (let i = 0; i < 4; i++) {
@@ -361,6 +367,28 @@ for (let i = 0; i < 3; i++) {
 for (let i = 0; i < 3; i++) {
 	addCharPants(`pants_brown_${i}`, { x: 48, y: 384+(i*16), w: 16, h: 16, palette: ARM_PALETTE });
 }
+const SHOE_COUNT = 7;
+for (let i = 0; i < SHOE_COUNT; i++) {
+  addCharShoes(`shoes_${i}`, { x: i * 16, y: 448, w: 16, h: 8 });
+}
+addCharShoes("shoes_none", { none: true });
+
+// all dresses are coats, my basic idea is that COATS change the bottom half outline alone.
+// Otherwise we get weird conditions where dresses / skirts clip past your coat etc. Might be nice to fix one day.
+addCharCoat("coats_yellow_rain",{ x: 0, y: 336, w: 32, h: 16, sleeve: 2, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharCoat("coats_purple_dress",{ x: 0, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharCoat("coats_green_dress",{ x: 32, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharCoat("coats_blue_dress",{ x: 64, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharCoat("coats_pink_dress",{ x: 96, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+addCharCoat("coats_cthulhu_dress",{ x: 128, y: 352, w: 32, h: 16, sleeve: 0, overPants: true, exportsColors: ["shirt"], palette: ARM_PALETTE});
+
+// add pants
+addCharCoat("coats_long_purple", { x: 0, y: 368, w: 32, h: 16, sleeve: 1, exportsColors: ["shirt"], colorOverrides: { shirt: "#793a80" }, palette: ARM_PALETTE });
+addCharCoat("coats_purple_dungarees", { x: 32, y: 368, w: 32, h: 16, sleeve: 0, exportsColors: ["shirt"], colorOverrides: { shirt: "#285cc4" }, palette: ARM_PALETTE });
+addCharCoat("coats_blue_dungarees", { x: 64, y: 368, w: 32, h: 16, sleeve: 0, exportsColors: ["shirt"], palette: ARM_PALETTE });
+addCharCoat("coats_cloud_dungarees", { x: 96, y: 368, w: 32, h: 16, sleeve: 2, exportsColors: ["shirt"], palette: ARM_PALETTE });
+addCharCoat("coats_black_dungarees", { x: 128, y: 368, w: 32, h: 16, sleeve: 2, exportsColors: ["shirt", "shirtSecondary"], palette: ARM_PALETTE });
+addCharCoat("coats_none", { none: true });
 
 const BACKDROP_COUNT = 10;
 for (let i = 0; i < BACKDROP_COUNT; i++) {
@@ -375,7 +403,8 @@ hairPicker.addEventListener("input", () => { snapshotHistory(); charRender.dirty
 
 const CATEGORY_STORE = {
   base: "bases", eyes: "eyes", mouth: "mouths",
-  hair: "hairs", shirt: "shirts", pants: "pants"
+  hair: "hairs", shirt: "shirts", legs: "pants",
+  shoes: "shoes", coat: "coats"
 };
 
 // Everything that randomize() can touch, keyed the same way it decides
@@ -391,7 +420,8 @@ const charCacheCtx = charCache.getContext("2d");
 const charRender = {
   options: {
     base: "skin_12", eyes: "eyes_13", mouth: "mouth_6",
-    hair: "hair_5", shirt: "shirts_blue_jumper", pants: "pants_1"
+    hair: "hair_5", shirt: "shirts_blue_jumper", legs: "pants_1",
+    shoes: "shoes_none", coat: "coats_none"
   },
   // Pose and backdrop live outside `options` on purpose: they're set by
   // whatever's driving the scene (walk cycle, a menu preview...) often and
@@ -565,6 +595,7 @@ function exportChar(){
 // Hi-res PNG export. The on-screen canvas is already the exact composited
 // frame at native 32x48 res, so we just blit it upscaled with smoothing off
 // (nearest-neighbour) onto a bigger offscreen canvas and download that.
+// TODO: Notify users when downloading lmfao
 function exportPNG(scale = 10) {
   const out = document.createElement("canvas");
   out.width = canv.width * scale;
@@ -588,7 +619,7 @@ function exportPNG(scale = 10) {
 
 function drawPart(store, id, targetCtx) {
   const def = data[store][id];
-  if (!def) return;
+  if (!def || def.none) return; // e.g. "shoes_none" / "coats_none"
   const sheet = data.spritesheets[def.sheet];
   if (!sheet) return;
 
@@ -604,15 +635,18 @@ function drawPart(store, id, targetCtx) {
     def.exportsColors.forEach((slot, i) => {
       const manual = def.colorOverrides && def.colorOverrides[slot];
       if (manual) {
-        // Hand-set on this specific part's definition — bypasses
+        // Hand-set on this specific part's definition and bypasses
         // getTopColors entirely for sprites where auto-detection grabs
         // the wrong dominant pixel (e.g. outline/shadow beats the actual
         // shirt colour). Accepts either a hex string or an [r,g,b] array.
         charRender.colors[slot] = typeof manual === "string" ? hexToRgb(manual) : manual;
-      } else if (top[i]) {
+      } else if (top[i] && !(slot === "shirtSecondary" && top[0] && colorsAreClose(top[i], top[0]))) {
         charRender.colors[slot] = top[i];
       }
     });
+    if (def.exportsColors.includes("shirtSecondary") && charRender.colors.shirt && !charRender.colors.shirtSecondary) {
+      charRender.colors.shirtSecondary = charRender.colors.shirt;
+    }
   }
 
   const replacements = {};
@@ -644,15 +678,31 @@ function renderCharacterToCache() {
 
   const shirtDef = data.shirts[charRender.options.shirt];
   if (shirtDef && shirtDef.overPants) {
-    drawPart("pants", charRender.options.pants, charCacheCtx);
+    drawPart("pants", charRender.options.legs, charCacheCtx);
     drawPart("shirts", charRender.options.shirt, charCacheCtx);
   } else {
     drawPart("shirts", charRender.options.shirt, charCacheCtx);
-    drawPart("pants", charRender.options.pants, charCacheCtx);
+    drawPart("pants", charRender.options.legs, charCacheCtx);
   }
 
-  const sleeve = shirtDef ? (shirtDef.sleeve ?? 0) : 0;
-  
+  drawPart("shoes", charRender.options.shoes, charCacheCtx); // on top of legs
+  // nab these in case coat tries to overtake them.
+  const shirtColors = { ...charRender.colors };
+
+  const coatDef = data.coats[charRender.options.coat];
+  drawPart("coats", charRender.options.coat, charCacheCtx); // above shirt, legs, and shoes
+
+  // Coat should possibly overtake the top underneath, but also be not.
+  let sleeve = shirtDef?.sleeve ?? 0;
+
+  if (coatDef && !coatDef.none && coatDef.sleeve != null && coatDef.sleeve != 0) {
+    sleeve = coatDef.sleeve;
+  }
+  // Set em back if so 
+  charRender.colors = coatDef?.sleeve != null && coatDef?.sleeve != 0
+    ? { ...charRender.colors }
+    : shirtColors;
+
   drawPart("eyes", charRender.options.eyes, charCacheCtx);
   drawPart("mouths", charRender.options.mouth, charCacheCtx);
   drawPart("hairs", charRender.options.hair, charCacheCtx);
@@ -719,9 +769,6 @@ function buildControls() {
     `;
     controls.appendChild(row);
   }
-
-  // Pose and backdrop share the same compact card shape as the categories
-  // above — just with their own handlers instead of a data-cat lookup.
   const poseRow = document.createElement("div");
   poseRow.className = "row";
   poseRow.id = "poseRow";
