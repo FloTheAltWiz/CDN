@@ -447,18 +447,7 @@ const BACKDROP_COUNT = 10;
 for (let i = 0; i < BACKDROP_COUNT; i++) {
   addBackdrop(`backdrop_${i}`, { x: i * 32, y: 0 });
 }
-let colorPreviewPending = false;
 
-function previewColor() {
-	if (colorPreviewPending) return;
-
-	colorPreviewPending = true;
-	requestAnimationFrame(() => {
-		colorPreviewPending = false;
-		charRender.dirty = true;
-		draw();
-	});
-}
 let colorPreviewPending = false;
 
 function previewColor() {
